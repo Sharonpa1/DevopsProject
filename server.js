@@ -1,7 +1,8 @@
 const express = require('express');
 const bodyParser = require('body-parser');
-const multer  = require('multer');
+const multer = require('multer');
 const ExcelJS = require('exceljs');
+
 const app = express();
 const port = process.env.PORT || 3000;
 const path = require('path');
@@ -10,19 +11,19 @@ const fs = require('fs');
 app.use(bodyParser.urlencoded({ extended: false }));
 app.use(bodyParser.json());
 
-app.get('/', (req,res)=>{
-    res.sendFile(path.join(__dirname, 'index.html'));
-})
-
-const storage = multer.diskStorage({
-  filename: function (req, file, cb) {
-    cb(null, file.originalname);
-  }
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-const upload = multer({ storage: storage });
+const storage = multer.diskStorage({
+  filename(req, file, cb) {
+    cb(null, file.originalname);
+  },
+});
 
-let workbook = new ExcelJS.Workbook();
+const upload = multer({ storage });
+
+const workbook = new ExcelJS.Workbook();
 let worksheet;
 
 function loadStudentsFromExcel(file) {
@@ -32,10 +33,10 @@ function loadStudentsFromExcel(file) {
       const newWorksheet = newWorkbook.getWorksheet();
 
       newWorksheet.eachRow((row, rowNumber) => {
-      row.eachCell((cell, colNumber) => {
-        worksheet.getCell(rowNumber, colNumber).value = cell.value;
+        row.eachCell((cell, colNumber) => {
+          worksheet.getCell(rowNumber, colNumber).value = cell.value;
+        });
       });
-    });
       console.log('Students loaded from Excel file successfully!');
       return workbook.xlsx.writeFile('students.xlsx');
     })
@@ -46,12 +47,12 @@ function loadStudentsFromExcel(file) {
 
 function createWorksheet() {
   worksheet = workbook.addWorksheet('Students');
-  
+
   worksheet.columns = [
     { header: 'Name', key: 'name', width: 20 },
     { header: 'Exam 1', key: 'exam1', width: 10 },
     { header: 'Exam 2', key: 'exam2', width: 10 },
-    { header: 'Exam 3', key: 'exam3', width: 10 }
+    { header: 'Exam 3', key: 'exam3', width: 10 },
   ];
 }
 
@@ -66,26 +67,27 @@ function saveStudentsToExcel() {
 }
 
 app.post('/register', (req, res) => {
-  const { name, exam1, exam2, exam3 } = req.body;
+  const {
+    name, exam1, exam2, exam3,
+  } = req.body;
 
   const student = {
     name,
     exam1: parseFloat(exam1),
     exam2: parseFloat(exam2),
-    exam3: parseFloat(exam3)
+    exam3: parseFloat(exam3),
   };
 
   worksheet.addRow(student).commit();
 
   saveStudentsToExcel();
 
-  res.send('Student registered successfully!');
+  res.send('Student added successfully!');
 });
 
 app.post('/upload', upload.single('file'), (req, res) => {
   const file = req.file.path;
   loadStudentsFromExcel(file);
-  const message = 'File uploaded and loaded successfully!';
   res.redirect('/');
 });
 
@@ -110,4 +112,4 @@ app.listen(port, () => {
   console.log(`Server is listening on port ${port}`);
 });
 
-module.exports = app
+module.exports = app;
